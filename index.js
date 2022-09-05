@@ -5,8 +5,9 @@ import dotenv from 'dotenv';
 import joi from 'joi';
 import dayjs from 'dayjs';
 
-dotenv.config();
 
+dotenv.config();
+deleteInactiveUser();
 
 const server = express();
 server.use(cors());
@@ -101,20 +102,107 @@ server.post('/messages', async (req,res)=>{
             to: message.to,
             text: message.text,
             type: message.type,
+            from: user,
             time: day.format('HH:MM:ss')
         })
         const messages = await db.collection('messages').findOne({text: message.text});
         console.log(messages, "alo alo")
-        res.status(201).send('Mensagem enviada com sucesso');
+        return res.status(201).send('Mensagem enviada com sucesso');
     }catch(error){
         res.sendStatus(500);
     }
 })
 
+server.get('/messages', async(req,res)=>{
+    try{
 
+        const limit = (req.query.limit);
+        const {user} = req.headers
+        console.log(user, "isso tem no meu user")
 
+        const usersMessages = await db.collection('messages').find().toArray();
+        const lastMessages = usersMessages.slice(usersMessages.length-limit)
+        const invertedLastMessages = lastMessages.reverse();
+        
+        
+        
 
+        const yourMessages = invertedLastMessages.map((message) => {
+            console.log('*********', message )
+            console.log('-----', message.type, message.to, message.from, user)
+            if(message.type === 'private_message' && (message.to === user || message.from === user)){
 
+                console.log('message ABLUBLE: ', message)
+                return message;
+            }
+            if(message.type ==='message'){
+              return message;
+            }
+        });
+        const filterYourMessages = yourMessages.filter(mess=>(mess !== undefined));
+                console.log('EU TO ABLUBLE DAS IDEIA', filterYourMessages)
+
+        return res.status(200).send(filterYourMessages);
+
+    } catch(error){
+        res.sendStatus(500);
+    }
+})
+
+server.post('/status', async(req,res)=>{
+    const { user } = req.headers;
+    try{
+
+        const activeUser = await db.collection('users').findOne({name: user});
+        console.log('AAAAAAAAAAAAAAAAAAA', activeUser)
+
+        if(activeUser===null){
+            return res.sendStatus(404);
+        }
+
+        const response = await db.collection('users').updateOne({lastStatus:activeUser.lastStatus},{$set:{lastStatus:Date.now()}})
+
+        res.status(200).send('Usuário atualizado com sucesso');
+
+    }catch(error){
+        res.sendStatus(500);
+    }
+});
+
+async function deleteInactiveUser(){
+    
+    try{
+       const intervalUser = setInterval( async()=>{
+   
+            const verificationUsers = await db.collection('users').find().toArray();
+            const deleteUsers = []
+        
+            verificationUsers.forEach (async (user) => {
+                let day = dayjs().locale('pt-br');
+                if((Date.now() - user.lastStatus) > 10000){
+                  /* deleteUsers.push(user); */
+                  await db.collection('users').deleteOne(user);
+                  await db.collection('messages').insertOne({
+                    from: user.name,
+                    to: 'Todos',
+                    text: 'sai da sala...',
+                    type: 'status',
+                    time:  day.format('HH:MM:ss')
+                      
+                  }) 
+                }
+            });
+            const help = await db.collection('messages').find().toArray();
+           /*  await db.collection('users').remove({deleteUsers}); */
+            console.log('******', verificationUsers);
+            console.log('-------------------------', help);
+
+        },5000)
+
+    }catch(error){
+        console.error(error);
+    }
+}
 
 
 
