@@ -87,11 +87,14 @@ server.post('/messages', async (req,res)=>{
     try{
         const message = req.body
         const {user} = req.headers
-
+        console.log('-----------------', message);
         let day = dayjs().locale('pt-br');
         const invalidName = messagesSchema.validate(message).error;
         const userOnline = await db.collection('users').findOne({name: user})
         console.log(user, "aqui tem o user ", userOnline)
+        if(message.type !== 'private_message' && message.type !== 'message'){
+            return res.sendStatus(422)
+        }
         if(invalidName){
             return res.status(422).send('Formato inválido')
         }
