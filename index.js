@@ -105,8 +105,7 @@ server.post('/messages', async (req,res)=>{
             from: user,
             time: day.format('HH:MM:ss')
         })
-        const messages = await db.collection('messages').findOne({text: message.text});
-        console.log(messages, "alo alo")
+        
         return res.status(201).send('Mensagem enviada com sucesso');
     }catch(error){
         res.sendStatus(500);
@@ -118,7 +117,7 @@ server.get('/messages', async(req,res)=>{
 
         const limit = (req.query.limit);
         const {user} = req.headers
-        console.log(user, "isso tem no meu user")
+        
 
         const usersMessages = await db.collection('messages').find().toArray();
         const lastMessages = usersMessages.slice(usersMessages.length-limit)
@@ -128,8 +127,7 @@ server.get('/messages', async(req,res)=>{
         
 
         const yourMessages = invertedLastMessages.map((message) => {
-            console.log('*********', message )
-            console.log('-----', message.type, message.to, message.from, user)
+            
             if(message.type === 'private_message' && (message.to === user || message.from === user)){
 
                 console.log('message ABLUBLE: ', message)
@@ -140,7 +138,7 @@ server.get('/messages', async(req,res)=>{
             }
         });
         const filterYourMessages = yourMessages.filter(mess=>(mess !== undefined));
-                console.log('EU TO ABLUBLE DAS IDEIA', filterYourMessages)
+                
 
         return res.status(200).send(filterYourMessages);
 
@@ -175,12 +173,11 @@ async function deleteInactiveUser(){
        const intervalUser = setInterval( async()=>{
    
             const verificationUsers = await db.collection('users').find().toArray();
-            const deleteUsers = []
-        
+            
             verificationUsers.forEach (async (user) => {
                 let day = dayjs().locale('pt-br');
                 if((Date.now() - user.lastStatus) > 10000){
-                  /* deleteUsers.push(user); */
+                 
                   await db.collection('users').deleteOne(user);
                   await db.collection('messages').insertOne({
                     from: user.name,
@@ -192,12 +189,7 @@ async function deleteInactiveUser(){
                   }) 
                 }
             });
-            const help = await db.collection('messages').find().toArray();
-           /*  await db.collection('users').remove({deleteUsers}); */
-            console.log('******', verificationUsers);
-            console.log('-------------------------', help);
-
-        },5000)
+        },15000)
 
     }catch(error){
         console.error(error);
